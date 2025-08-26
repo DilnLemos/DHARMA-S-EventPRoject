@@ -115,14 +115,53 @@ def ventana_mostrar_eliminados(eliminados, callback_refrescar):
             temp.after(2000, lambda: mostrar(i + 1))
         else:
             temp.destroy()
-            callback_refrescar()  # refresca ventana al terminar
+            callback_refrescar()
 
     mostrar()
     temp.mainloop()
 
 
+# ---- Mostrar fichas sin scrollbar, ajustando tamaño dinámicamente ----
+def mostrar_fichas(frame, numeros, color):
+    for widget in frame.winfo_children():
+        widget.destroy()
+
+    cantidad = len(numeros)
+    if cantidad == 0:
+        return
+
+    # Calcular cantidad de filas/columnas cuadradas
+    columnas = math.ceil(math.sqrt(cantidad))
+    filas = math.ceil(cantidad / columnas)
+
+    # Dimensiones del frame
+    frame.update_idletasks()
+    w = frame.winfo_width()
+    h = frame.winfo_height()
+
+    # Tamaño de cada celda
+    cell_w = max(1, w // columnas)
+    cell_h = max(1, h // filas)
+    size = min(cell_w, cell_h)
+
+    font_size = max(6, size // 3)
+
+    for i, num in enumerate(numeros):
+        fila = i // columnas
+        col = i % columnas
+        lbl = tk.Label(
+            frame,
+            text=num,
+            font=("Arial", font_size, "bold"),
+            width=1, height=1,
+            relief="solid",
+            bg=color,
+            fg="white"
+        )
+        lbl.place(x=col * cell_w, y=fila * cell_h, width=cell_w, height=cell_h)
+
+
 def ventana_consultar(menu):
-    # Destruir el menú solo si existe
     if menu is not None:
         try:
             menu.destroy()
@@ -155,20 +194,14 @@ def ventana_consultar(menu):
     boton_volver.place(x=1170, y=10, width=90, height=40)
 
     # --- Jugadores vivos ---
-    label_vivos = tk.Label(ventanacon, text="Jugadores vivos", font=("Arial", 26, "bold"), fg="#dd4c6d")
+    label_vivos = tk.Label(ventanacon, text="Jugadores vivos", font=("Arial", 26, "bold"), fg="#2ecc71")
     label_vivos.place(relx=0.25, rely=0.05, anchor="center")
 
-    frame_vivos = tk.Frame(ventanacon)
-    frame_vivos.place(relx=0.25, rely=0.45, anchor="center", relwidth=0.4, relheight=0.7)
+    frame_vivos = tk.Frame(ventanacon, bg="white")
+    frame_vivos.place(relx=0.25, rely=0.5, anchor="center", relwidth=0.4, relheight=0.7)
 
-    listbox_vivos = tk.Listbox(frame_vivos, font=("Arial", 18))
-    scrollbar_vivos = tk.Scrollbar(frame_vivos, orient="vertical", command=listbox_vivos.yview)
-    listbox_vivos.config(yscrollcommand=scrollbar_vivos.set)
-    listbox_vivos.pack(side="left", fill="both", expand=True)
-    scrollbar_vivos.pack(side="right", fill="y")
-
-    for num in leer_numeros():
-        listbox_vivos.insert(tk.END, num)
+    ventanacon.update_idletasks()
+    mostrar_fichas(frame_vivos, leer_numeros(), "#27ae60")
 
     # --- Premio actual ---
     eliminados = []
@@ -186,21 +219,13 @@ def ventana_consultar(menu):
     label_premio.place(relx=0.17, rely=0.90, anchor="center")
 
     # --- Jugadores eliminados ---
-    label_eliminados = tk.Label(ventanacon, text="Jugadores eliminados", font=("Arial", 26, "bold"),fg="#dd4c6d")
+    label_eliminados = tk.Label(ventanacon, text="Jugadores eliminados", font=("Arial", 26, "bold"), fg="#e74c3c")
     label_eliminados.place(relx=0.75, rely=0.05, anchor="center")
 
-    frame_eliminados = tk.Frame(ventanacon)
-    frame_eliminados.place(relx=0.75, rely=0.45, anchor="center", relwidth=0.4, relheight=0.7)
+    frame_eliminados = tk.Frame(ventanacon, bg="white")
+    frame_eliminados.place(relx=0.75, rely=0.5, anchor="center", relwidth=0.4, relheight=0.7)
 
-    listbox_eliminados = tk.Listbox(frame_eliminados, font=("Arial", 18))
-    scrollbar_eliminados = tk.Scrollbar(frame_eliminados, orient="vertical", command=listbox_eliminados.yview)
-    listbox_eliminados.config(yscrollcommand=scrollbar_eliminados.set)
-    listbox_eliminados.pack(side="left", fill="both", expand=True)
-    scrollbar_eliminados.pack(side="right", fill="y")
-
-    if eliminados:
-        for num in eliminados:
-            listbox_eliminados.insert(tk.END, num)
+    mostrar_fichas(frame_eliminados, eliminados, "#c0392b")
 
     def eliminar_mitad():
         numeros = leer_numeros()
@@ -208,11 +233,10 @@ def ventana_consultar(menu):
             messagebox.showwarning("Advertencia", "No hay números para eliminar")
             return
 
-        cantidad = math.ceil(len(numeros) / 2)  # mitad con techo
-        eliminados = random.sample(numeros, cantidad)
-        mover_a_eliminados(eliminados)
+        cantidad = math.ceil(len(numeros) / 2)
+        eliminados_sel = random.sample(numeros, cantidad)
+        mover_a_eliminados(eliminados_sel)
 
-        # Mostrar ventana de eliminados SIN destruir aún la ventana actual
         def refrescar_consulta():
             try:
                 ventanacon.destroy()
@@ -220,7 +244,7 @@ def ventana_consultar(menu):
                 pass
             ventana_consultar(None)
 
-        ventana_mostrar_eliminados(eliminados, refrescar_consulta)
+        ventana_mostrar_eliminados(eliminados_sel, refrescar_consulta)
 
     boton_eliminar = tk.Button(
         ventanacon, text="Eliminar mitad",
