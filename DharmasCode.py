@@ -66,16 +66,16 @@ def mostrar_numero_asignado(numero):
 def ventana_ingresar(menu):
     menu.destroy()
     ventana = tk.Tk()
-    ventana.title("👻 Registrar participante 👻")
+    ventana.title("Registro")
     ventana.geometry("1280x720")
     ventana.resizable(False, False)
     try:
-        ventana.iconbitmap("assets/icono.ico")
+        ventana.iconbitmap("assets/DharmaIcon.ico")
     except:
         pass
 
     try:
-        fondo_img = Image.open("assets/fondo2.png")
+        fondo_img = Image.open("assets/fondo4.png")
         fondo_photo = ImageTk.PhotoImage(fondo_img)
         fondo_label = tk.Label(ventana, image=fondo_photo)
         fondo_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -116,9 +116,10 @@ def ventana_ingresar(menu):
     ventana.mainloop()
 
 # ---- Ventana mostrar eliminados ----
+# ---- Ventana mostrar eliminados ----
 def ventana_mostrar_eliminados(eliminados, callback_refrescar):
     temp = tk.Toplevel()
-    temp.title("👻 Eliminando... 👻")
+    temp.title("Jugadores Eliminados...")
     temp.geometry("800x600")
     temp.resizable(False, False)
 
@@ -130,10 +131,26 @@ def ventana_mostrar_eliminados(eliminados, callback_refrescar):
                          relief="flat")
     label_num.place(relx=0.5, rely=0.5, anchor="center")
 
+    # --- Nuevo cálculo dinámico del tiempo ---
+    vivos_restantes = len(leer_numeros())
+
+    def calcular_tiempo(vivos):
+        """Ajusta la velocidad según cuántos jugadores quedan vivos."""
+        if vivos > 150:
+            return 200      # Muchos vivos → rápido
+        elif vivos > 50:
+            return 600      # Intermedio → velocidad media
+        elif vivos > 20:
+            return 1000     # Menos → un poco más lento
+        else:
+            return 2000     # Muy pocos vivos → lento, emocionante
+
+    tiempo_actual = calcular_tiempo(vivos_restantes)
+
     def mostrar(i=0):
         if i < len(eliminados):
             label_num.config(text=eliminados[i])
-            temp.after(2000, lambda: mostrar(i + 1))
+            temp.after(tiempo_actual, lambda: mostrar(i + 1))
         else:
             temp.destroy()
             callback_refrescar()
@@ -141,13 +158,14 @@ def ventana_mostrar_eliminados(eliminados, callback_refrescar):
     mostrar()
     temp.mainloop()
 
+
 # ---- Animación de sorteo sorpresa ----
 def ventana_sorteo_rapido(todos):
     temp = tk.Toplevel()
     temp.title("🎁 Sorteo Sorpresa 🎁")
     temp.geometry("800x600")
     temp.resizable(False, False)
-
+    
     label_titulo = tk.Label(temp, text="Sorteo Sorpresa", font=("Comic Sans MS", 32, "bold"), fg="black")
     label_titulo.pack(pady=40)
 
@@ -195,7 +213,7 @@ def mostrar_fichas(frame, numeros, color):
         fila = i // columnas
         col = i % columnas
         lbl = tk.Label(frame, text=num, font=("Comic Sans MS", font_size, "bold"),
-                       width=1, height=1, relief="flat",
+                       width=1, height=1, relief="solid", bd=2, highlightthickness=0,
                        bg=color, fg="white")
         lbl.place(x=col * cell_w, y=fila * cell_h, width=cell_w, height=cell_h)
 
@@ -210,11 +228,11 @@ def ventana_consultar(menu):
     ventanacon.geometry("1280x720")
     ventanacon.resizable(False, False)
     try:
-        ventanacon.iconbitmap("assets/icono.ico")
+        ventanacon.iconbitmap("assets/DharmaIcon.ico")
     except: pass
 
     try:
-        fondo_img = Image.open("assets/fondo2.png")
+        fondo_img = Image.open("assets/fondo4.png")
         fondo_photo = ImageTk.PhotoImage(fondo_img)
         fondo_label = tk.Label(ventanacon, image=fondo_photo)
         fondo_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -229,15 +247,15 @@ def ventana_consultar(menu):
     )
     boton_volver.place(x=1170, y=10, width=90, height=40)
 
-    # --- INICIO DE MODIFICACIÓN: Reemplazo del Label 'Jugadores Vivos' por la imagen "JuagadoresV.png" ---
+    # --- INICIO DE MODIFICACIÓN: Reemplazo del Label 'Jugadores Vivos' por la imagen "JugadoresV.png" ---
     try:
         # Cargar y redimensionar la imagen para que encaje con el Label de título (400x80 píxeles)
         img_vivos = Image.open("assets/JugadoresV.png")
-        img_vivos_resized = img_vivos.resize((400, 100))
+        img_vivos_resized = img_vivos.resize((400, 90))
         img_vivos_tk = ImageTk.PhotoImage(img_vivos_resized)
 
         # Crear un Label para la imagen y colocarlo en la posición original
-        label_vivos = tk.Label(ventanacon, image=img_vivos_tk, bd=0)
+        label_vivos = tk.Label(ventanacon, image=img_vivos_tk, bd=0, background= "#f5abcb")
         label_vivos.image = img_vivos_tk # Mantener referencia
         label_vivos.place(relx=0.25, rely=0.075, anchor="center") # Ajustado a 0.075 para mejor centrado vertical
 
@@ -251,7 +269,7 @@ def ventana_consultar(menu):
     frame_vivos = tk.Frame(ventanacon, bg="white", relief="flat", bd=0, highlightthickness=0)
     frame_vivos.place(relx=0.25, rely=0.5, anchor="center", relwidth=0.4, relheight=0.7)
     ventanacon.update_idletasks()
-    mostrar_fichas(frame_vivos, leer_numeros(), "#27ae60")
+    mostrar_fichas(frame_vivos, sorted(leer_numeros(), key=lambda x: int(x)), "#09C272")
 
     eliminados = []
     if os.path.exists(ARCHIVO_ELIMINADOS):
@@ -261,7 +279,10 @@ def ventana_consultar(menu):
     # ---- MODIFICACIÓN: Imagen + Premio oculto ----
     premio = len(eliminados) * 1500
     premio_str = str(premio)
-    premio_oculto = premio_str[0] + "X" * (len(premio_str) - 1)
+    if len(leer_numeros()) == 1:
+        premio_oculto = premio_str
+    else:
+        premio_oculto = "X" * (len(premio_str))
 
     try:
         img_premio = Image.open("assets/HuchaRX.png").resize((80, 80))
@@ -289,11 +310,11 @@ def ventana_consultar(menu):
     try:
         # Cargar y redimensionar la imagen para que encaje con el espacio del Label (aprox. 400x80 píxeles)
         img_eliminados = Image.open("assets/JuagadoresE.png")
-        img_eliminados_resized = img_eliminados.resize((400, 100))
+        img_eliminados_resized = img_eliminados.resize((400, 90))
         img_eliminados_tk = ImageTk.PhotoImage(img_eliminados_resized)
 
         # Crear un Label para la imagen y colocarlo en la posición original (relx=0.75, rely=0.075)
-        label_eliminados = tk.Label(ventanacon, image=img_eliminados_tk, bd=0)
+        label_eliminados = tk.Label(ventanacon, image=img_eliminados_tk, bd=0, bg="#f5abcb")
         label_eliminados.image = img_eliminados_tk # Mantener referencia
         label_eliminados.place(relx=0.75, rely=0.075, anchor="center")
 
@@ -306,14 +327,15 @@ def ventana_consultar(menu):
 
     frame_eliminados = tk.Frame(ventanacon, bg="white", relief="flat", bd=0, highlightthickness=0)
     frame_eliminados.place(relx=0.75, rely=0.5, anchor="center", relwidth=0.4, relheight=0.7)
-    mostrar_fichas(frame_eliminados, eliminados, "#c0392b")
+    mostrar_fichas(frame_eliminados, sorted(eliminados, key=lambda x: int(x)), "#c63637")
+
 
     def eliminar_mitad():
         numeros = leer_numeros()
         if not numeros:
             messagebox.showwarning("Advertencia", "No hay números para eliminar")
             return
-        cantidad = math.ceil(len(numeros) / 2)
+        cantidad = math.floor(len(numeros) / 2)
         eliminados_sel = random.sample(numeros, cantidad)
         mover_a_eliminados(eliminados_sel)
 
@@ -357,14 +379,14 @@ def ventana_consultar(menu):
 # ---- Menú principal ----
 def iniciar_programa():
     menu = tk.Tk()
-    menu.title("👻 HALLOWOD MENÚ 👻")
+    menu.title("HALLOWOD")
     menu.geometry("900x600")
     menu.resizable(False, False)
-    try: menu.iconbitmap("assets/icono.ico")
+    try: menu.iconbitmap("assets/DharmaIcon.ico")
     except: pass
 
     try:
-        fondo_img = Image.open("assets/fondo2.png")
+        fondo_img = Image.open("assets/fondo4.png")
         fondo_photo = ImageTk.PhotoImage(fondo_img)
         fondo_label = tk.Label(menu, image=fondo_photo)
         fondo_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -389,10 +411,10 @@ def iniciar_programa():
 
 # ---- Ventana inicial ----
 ventana = tk.Tk()
-ventana.title("👻 HALLOWOD 👻")
+ventana.title("HALLOWOD")
 ventana.geometry("500x600")
 ventana.resizable(False, False)
-try: ventana.iconbitmap("assets/icono.ico")
+try: ventana.iconbitmap("assets/DharmaIcon.ico")
 except: pass
 
 try:
