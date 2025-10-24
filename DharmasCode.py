@@ -42,12 +42,44 @@ def volver_menu(ventana, callback):
     ventana.destroy()
     callback()
 
+
+# Centrar cualquier ventana tkinter en pantalla sin cambiar su tamaño.
+def center_window(win):
+    """Centra la ventana `win` en la pantalla.
+    - Usa el tamaño ya establecido por `win.geometry()` si está disponible.
+    - Llama a update_idletasks() para obtener dimensiones reales antes de posicionar.
+    """
+    try:
+        win.update_idletasks()
+        w = win.winfo_width()
+        h = win.winfo_height()
+
+        # Si las dimensiones aún no están disponibles, intentar parsear geometry()
+        if w <= 1 or h <= 1:
+            try:
+                geom = win.geometry()  # formato: WxH+X+Y
+                size = geom.split('+')[0]
+                w, h = map(int, size.split('x'))
+            except Exception:
+                w = max(200, win.winfo_reqwidth())
+                h = max(100, win.winfo_reqheight())
+
+        sw = win.winfo_screenwidth()
+        sh = win.winfo_screenheight()
+        x = (sw // 2) - (w // 2)
+        y = (sh // 2) - (h // 2)
+        win.geometry(f"{w}x{h}+{x}+{y}")
+    except Exception:
+        # No interrumpir la ejecución si algo falla; centrado es un añadido no crítico.
+        pass
+
 # ---- Mostrar número asignado ----
 def mostrar_numero_asignado(numero):
     temp = tk.Toplevel()
     temp.title("Número asignado")
     temp.geometry("500x300")
     temp.resizable(False, False)
+    center_window(temp)
 
     label = tk.Label(temp, text=f"Tu número asignado es:", font=("Comic Sans MS", 26, "bold"))
     label.pack(pady=40)
@@ -69,6 +101,7 @@ def ventana_ingresar(menu):
     ventana.title("Registro")
     ventana.geometry("1280x720")
     ventana.resizable(False, False)
+    center_window(ventana)
     try:
         ventana.iconbitmap("assets/DharmaIcon.ico")
     except:
@@ -95,11 +128,11 @@ def ventana_ingresar(menu):
     # --- Nuevo registro automático ---
     def registrar_aleatorio():
         numeros_existentes = leer_numeros()
-        todos = set(map(str, range(1, 251)))
+        todos = set(map(str, range(1, 201)))
         disponibles = list(todos - set(numeros_existentes))
 
         if not disponibles:
-            messagebox.showwarning("Sin números disponibles", "Ya se asignaron todos los números del 1 al 250.")
+            messagebox.showwarning("Sin números disponibles", "Ya se asignaron todos los números del 1 al 200.")
             return
 
         numero_asignado = random.choice(disponibles)
@@ -122,6 +155,7 @@ def ventana_mostrar_eliminados(eliminados, callback_refrescar):
     temp.title("Jugadores Eliminados...")
     temp.geometry("800x600")
     temp.resizable(False, False)
+    center_window(temp)
 
     titulo = tk.Label(temp, text="Números eliminados", font=("Comic Sans MS", 28, "bold"),
                       bg="black", fg="white", relief="flat")
@@ -136,11 +170,11 @@ def ventana_mostrar_eliminados(eliminados, callback_refrescar):
 
     def calcular_tiempo(vivos):
         """Ajusta la velocidad según cuántos jugadores quedan vivos."""
-        if vivos > 150:
-            return 200      # Muchos vivos → rápido
-        elif vivos > 50:
+        if vivos > 100:
+            return 150      # Muchos vivos → rápido
+        elif vivos > 50 and vivos <= 100:
             return 600      # Intermedio → velocidad media
-        elif vivos > 20:
+        elif vivos > 25 and vivos <= 50:
             return 1000     # Menos → un poco más lento
         else:
             return 2000     # Muy pocos vivos → lento, emocionante
@@ -165,6 +199,7 @@ def ventana_sorteo_rapido(todos):
     temp.title("🎁 Sorteo Sorpresa 🎁")
     temp.geometry("800x600")
     temp.resizable(False, False)
+    center_window(temp)
     
     label_titulo = tk.Label(temp, text="Sorteo Sorpresa", font=("Comic Sans MS", 32, "bold"), fg="black")
     label_titulo.pack(pady=40)
@@ -192,30 +227,45 @@ def ventana_sorteo_rapido(todos):
 
 # ---- Mostrar fichas ----
 def mostrar_fichas(frame, numeros, color):
-    for widget in frame.winfo_children():
-        widget.destroy()
-    cantidad = len(numeros)
-    if cantidad == 0:
-        return
+    # Guardar datos en el frame para poder re-renderizar al cambiar tamaño.
+    frame._dharma_nums = list(numeros)
+    frame._dharma_color = color
 
-    columnas = math.ceil(math.sqrt(cantidad))
-    filas = math.ceil(cantidad / columnas)
+    def render(event=None):
+        # Redibuja todas las fichas según el tamaño actual del frame.
+        for widget in frame.winfo_children():
+            widget.destroy()
 
-    frame.update_idletasks()
-    w = frame.winfo_width()
-    h = frame.winfo_height()
-    cell_w = max(1, w // columnas)
-    cell_h = max(1, h // filas)
-    size = min(cell_w, cell_h)
-    font_size = max(6, size // 3)
+        cantidad = len(getattr(frame, '_dharma_nums', []))
+        if cantidad == 0:
+            return
 
-    for i, num in enumerate(numeros):
-        fila = i // columnas
-        col = i % columnas
-        lbl = tk.Label(frame, text=num, font=("Comic Sans MS", font_size, "bold"),
-                       width=1, height=1, relief="solid", bd=2, highlightthickness=0,
-                       bg=color, fg="white")
-        lbl.place(x=col * cell_w, y=fila * cell_h, width=cell_w, height=cell_h)
+        columnas = math.ceil(math.sqrt(cantidad))
+        filas = math.ceil(cantidad / columnas)
+
+        frame.update_idletasks()
+        w = frame.winfo_width() or frame.winfo_reqwidth()
+        h = frame.winfo_height() or frame.winfo_reqheight()
+        cell_w = max(1, w // columnas)
+        cell_h = max(1, h // filas)
+        size = min(cell_w, cell_h)
+        font_size = max(6, size // 3)
+
+        for i, num in enumerate(frame._dharma_nums):
+            fila = i // columnas
+            col = i % columnas
+            lbl = tk.Label(frame, text=num, font=("Comic Sans MS", font_size, "bold"),
+                           width=1, height=1, relief="solid", bd=2, highlightthickness=0,
+                           bg=frame._dharma_color, fg="white")
+            lbl.place(x=col * cell_w, y=fila * cell_h, width=cell_w, height=cell_h)
+
+    # Render inicial
+    render()
+
+    # Vincular re-renderizado cuando el frame cambia de tamaño (solo una vez)
+    if not getattr(frame, '_dharma_bound', False):
+        frame.bind('<Configure>', render)
+        frame._dharma_bound = True
 
 # ---- Ventana consultar ----
 def ventana_consultar(menu):
@@ -225,14 +275,15 @@ def ventana_consultar(menu):
 
     ventanacon = tk.Tk()
     ventanacon.title("👻 Consultar")
-    ventanacon.geometry("1280x720")
-    ventanacon.resizable(False, False)
+    ventanacon.geometry("1920x1080")
+    ventanacon.resizable(True, True)
+    center_window(ventanacon)
     try:
         ventanacon.iconbitmap("assets/DharmaIcon.ico")
     except: pass
 
     try:
-        fondo_img = Image.open("assets/fondo4.png")
+        fondo_img = Image.open("assets/fondo5.png")
         fondo_photo = ImageTk.PhotoImage(fondo_img)
         fondo_label = tk.Label(ventanacon, image=fondo_photo)
         fondo_label.place(x=0, y=0, relwidth=1, relheight=1)
@@ -277,12 +328,10 @@ def ventana_consultar(menu):
             eliminados = [line.strip() for line in f if line.strip()]
 
     # ---- MODIFICACIÓN: Imagen + Premio oculto ----
-    premio = len(eliminados) * 1500
+    premio = len(eliminados) * 1000
     premio_str = str(premio)
-    if len(leer_numeros()) == 1:
+    if len(leer_numeros()):
         premio_oculto = premio_str
-    else:
-        premio_oculto = "X" * (len(premio_str))
 
     try:
         img_premio = Image.open("assets/HuchaRX.png").resize((80, 80))
@@ -335,7 +384,10 @@ def ventana_consultar(menu):
         if not numeros:
             messagebox.showwarning("Advertencia", "No hay números para eliminar")
             return
-        cantidad = math.floor(len(numeros) / 2)
+        if len(numeros) != 3:
+            cantidad = math.floor(len(numeros) / 2)
+        elif len(numeros) == 3:
+            cantidad = math.ceil(len(numeros) / 2)
         eliminados_sel = random.sample(numeros, cantidad)
         mover_a_eliminados(eliminados_sel)
 
@@ -346,13 +398,29 @@ def ventana_consultar(menu):
 
         ventana_mostrar_eliminados(eliminados_sel, refrescar_consulta)
 
-    # --- Botón Eliminar ---
-    boton_eliminar = tk.Button(
-        ventanacon, text="Eliminar", command=eliminar_mitad,
-        bg="black", fg="white", font=("Comic Sans MS", 14, "bold"),
-        relief="flat", bd=0, highlightthickness=0
-    )
-    boton_eliminar.place(relx=0.61, rely=0.9, anchor="center", width=150, height=40)
+    # --- Botón Eliminar (REEMPLAZADO POR IMAGEN) ---
+    try:
+    # Cargar la imagen del botón eliminar
+        img_eliminar = Image.open("assets/eliminarjugadores.png")
+        img_eliminar_resized = img_eliminar.resize((170, 60))  # Mismo tamaño que el botón original
+        img_eliminar_tk = ImageTk.PhotoImage(img_eliminar_resized)
+    
+        boton_eliminar = tk.Button(
+            ventanacon, image=img_eliminar_tk, command=eliminar_mitad,
+            relief="flat", bd=0, highlightthickness=0, bg="#f5abcb"
+        )
+        boton_eliminar.image = img_eliminar_tk  # Mantener referencia
+        boton_eliminar.place(relx=0.61, rely=0.9, anchor="center", width=150, height=40)
+    
+    except Exception as e:
+        # Fallback en caso de error al cargar la imagen
+        boton_eliminar = tk.Button(
+            ventanacon, text="Eliminar", command=eliminar_mitad,
+            bg="black", fg="white", font=("Comic Sans MS", 14, "bold"),
+            relief="flat", bd=0, highlightthickness=0
+        )
+        boton_eliminar.place(relx=0.61, rely=0.9, anchor="center", width=150, height=40)
+        print(f"Error al cargar la imagen 'eliminarjugadores.png': {e}")
 
     # --- Botón de sorteo sorpresa ---
     def sorteo_sorpresa():
@@ -382,6 +450,7 @@ def iniciar_programa():
     menu.title("HALLOWOD")
     menu.geometry("900x600")
     menu.resizable(False, False)
+    center_window(menu)
     try: menu.iconbitmap("assets/DharmaIcon.ico")
     except: pass
 
@@ -414,6 +483,7 @@ ventana = tk.Tk()
 ventana.title("HALLOWOD")
 ventana.geometry("500x600")
 ventana.resizable(False, False)
+center_window(ventana)
 try: ventana.iconbitmap("assets/DharmaIcon.ico")
 except: pass
 
